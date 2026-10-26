@@ -40,3 +40,68 @@ function applyFilter() {
 
 select.addEventListener("change", applyFilter);
 render(announcements);
+
+// Блок «Найближчі вихідні»: державні свята України з https://date.nager.at
+const holidaysBtn = document.querySelector("#holidays-btn");
+const holidaysStatus = document.querySelector("#holidays-status");
+const holidaysList = document.querySelector("#holidays-list");
+
+if (holidaysBtn && holidaysStatus && holidaysList) {
+  holidaysBtn.addEventListener("click", loadHolidays);
+}
+
+async function loadHolidays() {
+  // Щоб повторне натискання не дублювало список
+  holidaysList.textContent = "";
+  // Стан 1: завантаження
+  holidaysStatus.textContent = "Завантажую…";
+  holidaysBtn.disabled = true;
+
+  try {
+    const year = new Date().getFullYear();
+    const response = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/UA`);
+
+    // Обов'язкова перевірка response.ok
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    // Брейкпоінт для перевірки: поставте breakpoint на наступному рядку
+    // та подивіться значення змінної data у DevTools.
+    const holidays = data;
+
+    const now = new Date();
+    const todayStr =
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+    const upcoming = holidays
+      .filter((h) => typeof h.date === "string" && h.date > todayStr)
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+      .slice(0, 3);
+
+    for (const h of upcoming) {
+      const li = document.createElement("li");
+      li.className = "card";
+
+      const date = document.createElement("time");
+      date.dateTime = h.date;
+      date.textContent = h.date;
+
+      const name = document.createElement("p");
+      name.textContent = h.localName;
+
+      li.append(date, name);
+      holidaysList.append(li);
+    }
+
+    // Стан 3: порожньо при успіху
+    holidaysStatus.textContent = "";
+  } catch (err) {
+    // Стан 2: зрозуміла людині помилка
+    holidaysStatus.textContent = "Не вдалося завантажити свята. Перевірте з’єднання з інтернетом і спробуйте ще раз.";
+  } finally {
+    // Після помилки кнопка знову активна; під час завантаження була disabled
+    holidaysBtn.disabled = false;
+  }
+}
