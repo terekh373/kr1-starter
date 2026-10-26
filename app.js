@@ -50,6 +50,21 @@ if (holidaysBtn && holidaysStatus && holidaysList) {
   holidaysBtn.addEventListener("click", loadHolidays);
 }
 
+async function fetchHolidays(year) {
+  const response = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/UA`);
+
+  // Обов'язкова перевірка response.ok
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!Array.isArray(data)) {
+    throw new Error("Неочікуваний формат відповіді API");
+  }
+  return data;
+}
+
 async function loadHolidays() {
   // Щоб повторне натискання не дублювало список
   holidaysList.textContent = "";
@@ -59,24 +74,15 @@ async function loadHolidays() {
 
   try {
     const year = new Date().getFullYear();
-    const response = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/UA`);
-
-    // Обов'язкова перевірка response.ok
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
-    // Брейкпоінт для перевірки: поставте breakpoint на наступному рядку
-    // та подивіться значення змінної data у DevTools.
-    const holidays = data;
+    // Беремо й наступний рік: наприкінці року в поточному свят майже не лишається
+    const holidays = (await Promise.all([year, year + 1].map(fetchHolidays))).flat();
 
     const now = new Date();
     const todayStr =
       `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
     const upcoming = holidays
-      .filter((h) => typeof h.date === "string" && h.date > todayStr)
+      .filter((h) => typeof h.date === "string" && h.date >= todayStr)
       .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
       .slice(0, 3);
 
@@ -95,8 +101,9 @@ async function loadHolidays() {
       holidaysList.append(li);
     }
 
-    // Стан 3: порожньо при успіху
-    holidaysStatus.textContent = "";
+    // Стан 3: при успіху — порожньо, а якщо свят немає, кажемо про це
+    holidaysStatus.textContent =
+      upcoming.length === 0 ? "Найближчим часом державних свят немає." : "";
   } catch (err) {
     // Стан 2: зрозуміла людині помилка
     holidaysStatus.textContent = "Не вдалося завантажити свята. Перевірте з’єднання з інтернетом і спробуйте ще раз.";
