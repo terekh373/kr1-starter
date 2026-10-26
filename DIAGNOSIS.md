@@ -18,8 +18,8 @@
 
 ## Тикет 3
 Скарга: «Обираю категорію у фільтрі — показує „Нічого не знайдено“, хоча оголошення цієї категорії є. Працює тільки „усі“».
-Шар: 
-Інструмент: 
-Винуватець: 
-Причина:
-Виправлення:
+Шар: JS
+Інструмент: DevTools -> Elements -> select#category, app.js -> find "select#category"
+Винуватець: app.js:const filtered = value === "all" ? announcements : announcements.filter((a) => a.category === value);
+Причина: Проблема полягає у чутливості до регістру між значеннями у масиві announcements та значеннями в атрибутах <option> у HTML.
+Виправлення: Зробити порівняння незалежним від регістру - const filtered = value === "all" ? announcements : announcements.filter((a) => a.category.toLowerCase() === value.toLowerCase());
