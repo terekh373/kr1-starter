@@ -21,18 +21,43 @@
 
   <main>
     <h1>Нове оголошення</h1>
+
     <div class="form-box">
-      <div>Заголовок</div>
-      <input type="text" placeholder="Заголовок">
-      <div>Категорія</div>
-      <select>
-        <option>навчання</option>
-        <option>події</option>
-        <option>адмін</option>
-      </select>
-      <div>Текст</div>
-      <textarea rows="5" placeholder="Текст оголошення"></textarea>
-      <div class="actions"><a href="#" class="btn">Опублікувати</a></div>
+      <form method="post" action="/">
+        <div>
+          <label for="title">Заголовок</label>
+          <input
+            type="text"
+            id="title"
+            name="title"
+            placeholder="Заголовок"
+            required
+          >
+        </div>
+
+        <div>
+          <label for="category">Категорія</label>
+          <select id="category" name="category">
+            <option value="навчання">навчання</option>
+            <option value="події">події</option>
+            <option value="адмін">адмін</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="text">Текст</label>
+          <textarea
+            id="text"
+            name="text"
+            rows="5"
+            placeholder="Текст оголошення"
+          ></textarea>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn">Опублікувати</button>
+        </div>
+      </form>
     </div>
   </main>
 

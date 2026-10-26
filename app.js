@@ -34,9 +34,87 @@ function render(items) {
 
 function applyFilter() {
   const value = select.value;
-  const filtered = value === "all" ? announcements : announcements.filter((a) => a.category === value);
+  const filtered = value === "all" ? announcements : announcements.filter((a) => a.category.toLowerCase() === value.toLowerCase());
   render(filtered);
 }
 
 select.addEventListener("change", applyFilter);
 render(announcements);
+
+// Блок «Найближчі вихідні»: державні свята України з https://date.nager.at
+const holidaysBtn = document.querySelector("#holidays-btn");
+const holidaysStatus = document.querySelector("#holidays-status");
+const holidaysList = document.querySelector("#holidays-list");
+
+if (holidaysBtn && holidaysStatus && holidaysList) {
+  holidaysBtn.addEventListener("click", loadHolidays);
+}
+
+async function fetchHolidays(year) {
+  const response = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/UA`);
+
+  // Обов'язкова перевірка response.ok
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!Array.isArray(data)) {
+    throw new Error("Неочікуваний формат відповіді API");
+  }
+  return data;
+}
+
+async function loadHolidays() {
+  // Щоб повторне натискання не дублювало список
+  holidaysList.textContent = "";
+  // Стан 1: завантаження
+  holidaysStatus.textContent = "Завантажую…";
+  holidaysBtn.disabled = true;
+
+  try {
+    const year = new Date().getFullYear();
+    // Беремо й наступний рік: наприкінці року в поточному свят майже не лишається
+    const holidays = (await Promise.all([year, year + 1].map(fetchHolidays))).flat();
+
+    const now = new Date();
+    const todayStr =
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+    const upcoming = holidays
+      .filter((h) => typeof h.date === "string" && h.date >= todayStr)
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+      .slice(0, 3);
+
+    for (const h of upcoming) {
+      const li = document.createElement("li");
+      li.className = "card";
+
+      const date = document.createElement("time");
+      date.dateTime = h.date;
+      date.textContent = h.date;
+
+      const name = document.createElement("p");
+      name.textContent = h.localName;
+
+      li.append(date, name);
+      holidaysList.append(li);
+    }
+
+    // Стан 3: при успіху — порожньо, а якщо свят немає, кажемо про це
+    holidaysStatus.textContent =
+      upcoming.length === 0 ? "Найближчим часом державних свят немає." : "";
+  } catch (err) {
+    // Помилку не ковтаємо: розробник бачить її в консолі DevTools
+    console.error("Не вдалося завантажити свята:", err);
+    // Стан 2: зрозуміла людині помилка з правдивою причиною.
+    // Мережева помилка fetch — це TypeError; HTTP-статус чи поганий формат — звичайний Error.
+    holidaysStatus.textContent =
+      err instanceof TypeError
+        ? "Не вдалося завантажити свята. Перевірте з’єднання з інтернетом і спробуйте ще раз."
+        : "Сервіс свят зараз недоступний. Спробуйте пізніше.";
+  } finally {
+    // Після помилки кнопка знову активна; під час завантаження була disabled
+    holidaysBtn.disabled = false;
+  }
+}
